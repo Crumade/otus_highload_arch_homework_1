@@ -14,8 +14,8 @@ import (
 const (
 	HOST     = "localhost"
 	PORT     = 5432
-	USER     = "postgres"
-	PASSWORD = "731596"
+	USER     = "go_app"
+	PASSWORD = "pwdotus1"
 	DBNAME   = "social_network"
 )
 
