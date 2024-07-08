@@ -1,45 +1,80 @@
 package server
 
 import (
-	"log"
+	"errors"
 	"net/http"
-	"strconv"
 
-	httpResponse "soc_net/internal/pkg"
+	models "social_network/internal/model"
+	utils "social_network/internal/pkg/utils"
+	"social_network/internal/service"
+
+	"github.com/jmoiron/sqlx"
 )
 
-func NewRouter() *http.ServeMux {
+func NewRouter(db *sqlx.DB) *http.ServeMux {
 	router := http.NewServeMux()
 
-	router.HandleFunc("POST /login", login)
-	router.HandleFunc("POST /user/register", register)
-	router.HandleFunc("GET /user/get/{id}", getUserByID)
+	router.HandleFunc("POST /login", login(db))
+	router.HandleFunc("POST /user/register", register(db))
+	router.HandleFunc("GET /user/get/{id}", getUserByID(db))
 
 	return router
 }
 
-func login(w http.ResponseWriter, r *http.Request) {
+func login(db *sqlx.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 
-	resp := httpResponse.Response{}
-	resp.Code = 0
+		loginData := new(models.LoginRequest)
 
-	log.Println(resp)
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("This is login"))
-}
+		err := utils.ParseJSON(r, loginData)
+		if err != nil {
+			utils.WriteError(w, http.StatusBadRequest, err)
+			return
+		}
 
-func register(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("This is registration"))
-}
+		token, err := service.Login(db, loginData)
+		if err != nil {
+			utils.WriteError(w, http.StatusBadRequest, err)
+			return
+		}
 
-func getUserByID(w http.ResponseWriter, r *http.Request) {
-	id := r.PathValue("id")
-	if _, err := strconv.Atoi(id); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
+		utils.WriteJSON(w, http.StatusAccepted, token)
 	}
+}
 
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("This is user by id " + id))
+func register(db *sqlx.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		user := new(models.User)
+
+		err := utils.ParseJSON(r, user)
+		if err != nil {
+			utils.WriteError(w, http.StatusBadRequest, err)
+			return
+		}
+		if user.Password == "" {
+			utils.WriteError(w, http.StatusBadRequest, errors.New("не передан пароль"))
+			return
+		}
+		result, err := service.Register(db, user)
+		if err != nil {
+			utils.WriteError(w, http.StatusBadRequest, err)
+			return
+		}
+
+		utils.WriteJSON(w, http.StatusCreated, result)
+	}
+}
+
+func getUserByID(db *sqlx.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := r.PathValue("id")
+
+		result, err := service.GetUser(db, id)
+		if err != nil {
+			utils.WriteError(w, http.StatusBadRequest, err)
+			return
+		}
+
+		utils.WriteJSON(w, http.StatusOK, result)
+	}
 }

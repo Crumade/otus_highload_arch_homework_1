@@ -1,7 +1,7 @@
 package app
 
 import (
-	server "soc_net/internal/server"
+	server "social_network/internal/server"
 )
 
 type Application struct{}
