@@ -1,0 +1,23 @@
+version: '3.8'
+services:
+  backend:
+    build: build/
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres
+    restart: always
+    environment:
+      - POSTGRES_user=go_app
+      - POSTGRES_PASSWORD=pwdotus1
+      - POSTGRES_DB=social_network
+    
+    ports:
+      - '5431:5432'
+    healthcheck:
+      test: [ "CMD", "pg_isready" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
