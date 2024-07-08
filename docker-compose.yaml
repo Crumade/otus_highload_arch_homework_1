@@ -1,0 +1,31 @@
+services:
+  backend:
+    build:
+      context: backend
+      target: builder
+    secrets:
+      - db-password
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres
+    restart: always
+    user: postgres
+    secrets:
+      - db-password
+    environment:
+      - POSTGRES_DB=social_network
+      - POSTGRES_PASSWORD_FILE=/run/secrets/db-password
+    expose:
+      - 5432
+    healthcheck:
+      test: [ "CMD", "pg_isready" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+secrets:
+  db-password:
+    file: db/password.txt
