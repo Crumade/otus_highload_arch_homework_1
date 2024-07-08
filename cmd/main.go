@@ -1,7 +1,7 @@
 package main
 
 import (
-	"soc_net/internal/app"
+	"social_network/internal/app"
 )
 
 func main() {
