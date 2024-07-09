@@ -21,16 +21,16 @@ func RunServer() {
 
 	driver, err := postgres.WithInstance(connDB.DB, &postgres.Config{})
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("Instance error: " + err.Error())
 	}
 	m, err := migrate.NewWithDatabaseInstance(
-		"file://C:/Users/Crumade/Documents/projects/otus_highload_arch_homework_1/migrations",
+		"file:///app/migrations",
 		"postgres", driver)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("New DB Instance error: " + err.Error())
 	}
 	if err := m.Up(); err != nil {
-		log.Fatal(err)
+		log.Fatal("Up migrations error: " + err.Error())
 	}
 
 	log.Println("DB connection success")
