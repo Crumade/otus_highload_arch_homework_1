@@ -12,10 +12,12 @@ import (
 )
 
 const (
-	HOST     = "localhost"
-	PORT     = 5432
-	USER     = "go_app"
-	PASSWORD = "pwdotus1"
+	HOST = "host.docker.internal"
+	PORT = 5431
+	// USER     = "go_app"
+	// PASSWORD = "pwdotus1"
+	USER     = "postgres"
+	PASSWORD = "postgres"
 	DBNAME   = "social_network"
 )
 
