@@ -1,6 +1,8 @@
 package storage
 
 import (
+	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 	models "social_network/internal/model"
@@ -12,10 +14,8 @@ import (
 )
 
 const (
-	HOST = "host.docker.internal"
-	PORT = 5431
-	// USER     = "go_app"
-	// PASSWORD = "pwdotus1"
+	HOST     = "host.docker.internal"
+	PORT     = 5431
 	USER     = "postgres"
 	PASSWORD = "postgres"
 	DBNAME   = "social_network"
@@ -49,10 +49,14 @@ func NewConnection() (*sqlx.DB, error) {
 func GetUserByID(db *sqlx.DB, id string) (*models.User, error) {
 	user := new(models.User)
 
-	err := db.QueryRowx("SELECT first_name, second_name, birthdate, gender, biography, city FROM public.users WHERE id = $1", id).StructScan(user)
-	if err != nil {
+	err := db.Get(user, "SELECT first_name, second_name, birthdate, gender, biography, city FROM public.users WHERE id = $1", id)
+	if err == sql.ErrNoRows {
+		err := errors.New("user not found")
+		return nil, err
+	} else if err != nil {
 		return nil, err
 	}
+
 	return user, nil
 }
 
@@ -65,21 +69,24 @@ func CreateUser(db *sqlx.DB, user *models.User) (*models.UserRegisterResponse, e
 		return nil, err
 	}
 
-	for rows.Next() {
+	defer rows.Close()
+	if rows.Next() {
 		err := rows.StructScan(result)
 		if err != nil {
 			return nil, err
 		}
 	}
-	defer rows.Close()
 
 	return result, nil
 }
 
 func GetAuthData(db *sqlx.DB, loginData *models.LoginRequest) (*models.AuthData, error) {
 	authData := new(models.AuthData)
-	err := db.QueryRowx("SELECT password_hash, salt FROM public.user_data WHERE user_id = $1", loginData.UserID).StructScan(authData)
-	if err != nil {
+	err := db.Get(authData, "SELECT password_hash, salt FROM public.user_data WHERE user_id = $1", loginData.UserID)
+	if err == sql.ErrNoRows {
+		err := errors.New("user not found")
+		return nil, err
+	} else if err != nil {
 		return nil, err
 	}
 
