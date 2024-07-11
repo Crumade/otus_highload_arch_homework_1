@@ -26,7 +26,7 @@ func Login(db *sqlx.DB, loginData *models.LoginRequest) (*models.LoginResponse, 
 		return &models.LoginResponse{Token: token}, nil
 	}
 
-	return nil, errors.New("something goes wrong")
+	return nil, errors.New("user id or password invalid")
 }
 
 func HashedPassword(password string, salt string) string {
