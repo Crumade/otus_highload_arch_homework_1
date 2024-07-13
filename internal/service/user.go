@@ -9,7 +9,10 @@ import (
 )
 
 func GetUser(db *sqlx.DB, id string) (*models.User, error) {
-
+	_, err := uuid.Parse(id)
+	if err != nil {
+		return nil, err
+	}
 	user, err := storage.GetUserByID(db, id)
 	if err != nil {
 		return nil, err
