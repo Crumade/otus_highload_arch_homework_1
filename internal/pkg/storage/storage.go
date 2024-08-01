@@ -2,12 +2,19 @@ package storage
 
 import (
 	"database/sql"
+	"encoding/csv"
 	"errors"
 	"fmt"
+	"io"
 	"log"
+	"os"
 	models "social_network/internal/model"
+	"strings"
 	"time"
 
+	"github.com/golang-migrate/migrate/v4"
+	"github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/google/uuid"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/jmoiron/sqlx"
@@ -46,6 +53,105 @@ func NewConnection() (*sqlx.DB, error) {
 	return db, nil
 }
 
+func MigrateSchema(connDB *sqlx.DB) {
+	driver, err := postgres.WithInstance(connDB.DB, &postgres.Config{})
+	if err != nil {
+		log.Fatal("Instance error: " + err.Error())
+	}
+	m, err := migrate.NewWithDatabaseInstance(
+		"file:///app/migrations",
+		"postgres", driver)
+	if err != nil {
+		log.Fatal("New DB Instance error: " + err.Error())
+	}
+	if err := m.Up(); err != nil {
+		log.Fatal("Up migrations error: " + err.Error())
+	}
+}
+
+func createIndexes(db *sqlx.DB) error {
+
+	ext, err := db.Preparex("CREATE EXTENSION pg_trgm;")
+	if err != nil {
+		return err
+	}
+	_, err = ext.Exec()
+	if err != nil {
+		return err
+	}
+
+	index, err := db.Preparex("	CREATE INDEX users_names_idx ON users USING gist(second_name gist_trgm_ops, first_name gist_trgm_ops);")
+	if err != nil {
+		return err
+	}
+	_, err = index.Exec()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func MigrateUsers(connDB *sqlx.DB) error {
+	file, err := os.Open("people.csv")
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	r := csv.NewReader(file)
+	var placeholders []string
+	var users []any
+	index := 0
+	start := time.Now()
+	for {
+		record, err := r.Read()
+		if err == io.EOF {
+			insertStatement := fmt.Sprintf("INSERT INTO users(first_name, second_name, birthdate, city) VALUES %s", strings.Join(placeholders, ","))
+			//log.Printf("\n%+v", users...)
+			_, err = connDB.Exec(insertStatement, users...)
+			if err != nil {
+				return err
+			}
+			users = nil
+			placeholders = nil
+			index = 0
+			log.Printf("Для добавления в БД прошло времени %.2f c\n", time.Since(start).Seconds())
+			break
+		}
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		fio := strings.Split(record[0], " ")
+
+		placeholders = append(placeholders, fmt.Sprintf("($%d,$%d,$%d,$%d)",
+			index*4+1,
+			index*4+2,
+			index*4+3,
+			index*4+4,
+		))
+		users = append(users, fio[1], fio[0], record[1], record[2])
+		index++
+		if len(users) == 65000 {
+
+			insertStatement := fmt.Sprintf("INSERT INTO users(first_name, second_name, birthdate, city) VALUES %s", strings.Join(placeholders, ","))
+			_, err = connDB.Exec(insertStatement, users...)
+			if err != nil {
+				return err
+			}
+			users = nil
+			placeholders = nil
+			index = 0
+		}
+	}
+
+	err = createIndexes(connDB)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func GetUserByID(db *sqlx.DB, id string) (*models.User, error) {
 	user := new(models.User)
 
@@ -58,6 +164,33 @@ func GetUserByID(db *sqlx.DB, id string) (*models.User, error) {
 	}
 
 	return user, nil
+}
+
+func SearchUser(db *sqlx.DB, firstName string, lastName string) (*[]models.User, error) {
+	users := new([]models.User)
+	stm, err := db.Preparex(`SELECT id,
+						first_name, 
+						second_name, 
+						birthdate, 
+						coalesce(gender, '') as gender, 
+						coalesce(biography, '') as biography, 
+						city 
+					FROM public.users 
+					WHERE second_name like  $1 
+					AND first_name like $2
+					ORDER BY id`)
+	if err != nil {
+		return nil, err
+	}
+
+	err = stm.Select(users, firstName+"%", lastName+"%")
+	if err == sql.ErrNoRows {
+		err := errors.New("user not found")
+		return nil, err
+	} else if err != nil {
+		return nil, err
+	}
+	return users, nil
 }
 
 func CreateUser(db *sqlx.DB, user *models.User) (*models.UserRegisterResponse, error) {

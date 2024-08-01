@@ -17,6 +17,7 @@ func NewRouter(db *sqlx.DB) *http.ServeMux {
 	router.HandleFunc("POST /login", login(db))
 	router.HandleFunc("POST /user/register", register(db))
 	router.HandleFunc("GET /user/get/{id}", getUserByID(db))
+	router.HandleFunc("GET /user/search", searchUser(db))
 
 	return router
 }
@@ -70,6 +71,25 @@ func getUserByID(db *sqlx.DB) http.HandlerFunc {
 		id := r.PathValue("id")
 
 		result, err := service.GetUser(db, id)
+		if err != nil {
+			utils.WriteError(w, http.StatusBadRequest, err)
+			return
+		}
+
+		utils.WriteJSON(w, http.StatusOK, result)
+	}
+}
+
+func searchUser(db *sqlx.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		firstName := r.URL.Query().Get("first_name")
+		lastName := r.URL.Query().Get("last_name")
+		if firstName == "" || lastName == "" {
+			utils.WriteError(w, http.StatusBadRequest, errors.New("отсутствуют GET параметры"))
+			return
+		}
+
+		result, err := service.SearchUser(db, firstName, lastName)
 		if err != nil {
 			utils.WriteError(w, http.StatusBadRequest, err)
 			return
