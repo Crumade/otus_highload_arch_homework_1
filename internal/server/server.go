@@ -5,35 +5,23 @@ import (
 	"net/http"
 	"social_network/internal/pkg/storage"
 	"time"
-
-	"github.com/golang-migrate/migrate/v4"
-	"github.com/golang-migrate/migrate/v4/database/postgres"
-	_ "github.com/golang-migrate/migrate/v4/source/file"
 )
 
 func RunServer() {
 
 	connDB, err := storage.NewConnection()
 	if err != nil {
-		log.Fatal("Не удалось подключиться к БД!")
+		log.Fatal("Ошибка: не удалось подключиться к БД")
 	}
 	defer connDB.Close()
 
-	driver, err := postgres.WithInstance(connDB.DB, &postgres.Config{})
-	if err != nil {
-		log.Fatal("Instance error: " + err.Error())
-	}
-	m, err := migrate.NewWithDatabaseInstance(
-		"file:///app/migrations",
-		"postgres", driver)
-	if err != nil {
-		log.Fatal("New DB Instance error: " + err.Error())
-	}
-	if err := m.Up(); err != nil {
-		log.Fatal("Up migrations error: " + err.Error())
-	}
-
+	storage.MigrateSchema(connDB)
 	log.Println("DB connection success")
+
+	err = storage.MigrateUsers(connDB)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	router := NewRouter(connDB)
 
