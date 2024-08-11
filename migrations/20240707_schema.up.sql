@@ -8,6 +8,13 @@ CREATE TABLE IF NOT EXISTS users(
 	city varchar(100)
 );
 
+CREATE TABLE IF NOT EXISTS posts(
+	id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+	user uuid NOT NULL,
+	created_at timestamptz NOT NULL DEFAULT now(),
+	content varchar
+);
+
 CREATE TABLE IF NOT EXISTS user_data(
 	user_id uuid NOT NULL,
 	password_hash varchar NOT NULL,
