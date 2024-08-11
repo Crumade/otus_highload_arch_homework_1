@@ -53,8 +53,8 @@ func NewConnection() (*sqlx.DB, error) {
 	return db, nil
 }
 
-func MigrateSchema(connDB *sqlx.DB) {
-	driver, err := postgres.WithInstance(connDB.DB, &postgres.Config{})
+func MigrateSchema(db *sqlx.DB) {
+	driver, err := postgres.WithInstance(db.DB, &postgres.Config{})
 	if err != nil {
 		log.Fatal("Instance error: " + err.Error())
 	}
@@ -91,7 +91,7 @@ func createIndexes(db *sqlx.DB) error {
 	return nil
 }
 
-func MigrateUsers(connDB *sqlx.DB) error {
+func MigrateUsers(db *sqlx.DB) error {
 	file, err := os.Open("people.csv")
 	if err != nil {
 		return err
@@ -108,7 +108,7 @@ func MigrateUsers(connDB *sqlx.DB) error {
 		if err == io.EOF {
 			insertStatement := fmt.Sprintf("INSERT INTO users(first_name, second_name, birthdate, city) VALUES %s", strings.Join(placeholders, ","))
 			//log.Printf("\n%+v", users...)
-			_, err = connDB.Exec(insertStatement, users...)
+			_, err = db.Exec(insertStatement, users...)
 			if err != nil {
 				return err
 			}
@@ -135,7 +135,7 @@ func MigrateUsers(connDB *sqlx.DB) error {
 		if len(users) == 65000 {
 
 			insertStatement := fmt.Sprintf("INSERT INTO users(first_name, second_name, birthdate, city) VALUES %s", strings.Join(placeholders, ","))
-			_, err = connDB.Exec(insertStatement, users...)
+			_, err = db.Exec(insertStatement, users...)
 			if err != nil {
 				return err
 			}
@@ -145,7 +145,7 @@ func MigrateUsers(connDB *sqlx.DB) error {
 		}
 	}
 
-	err = createIndexes(connDB)
+	err = createIndexes(db)
 	if err != nil {
 		return err
 	}
@@ -243,4 +243,29 @@ func CreateAuthData(db *sqlx.DB, userID string, passwordHash string, salt string
 	}
 
 	return nil
+}
+
+func GetPostFeed(db *sqlx.DB, offset int, limit int) (*[]models.Post, error) {
+	posts := new([]models.Post)
+	stm, err := db.Preparex(`SELECT id,
+						first_name, 
+						second_name, 
+						birthdate, 
+						coalesce(gender, '') as gender, 
+						coalesce(biography, '') as biography, 
+						city 
+					FROM public.posts 
+`)
+	if err != nil {
+		return nil, err
+	}
+
+	err = stm.Select(posts, offset, limit)
+	if err == sql.ErrNoRows {
+		err := errors.New("posts not found")
+		return nil, err
+	} else if err != nil {
+		return nil, err
+	}
+	return posts, nil
 }
