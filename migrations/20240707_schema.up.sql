@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS users(
 
 CREATE TABLE IF NOT EXISTS posts(
 	id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-	user uuid NOT NULL,
+	user_id uuid NOT NULL,
 	created_at timestamptz NOT NULL DEFAULT now(),
 	content varchar
 );
