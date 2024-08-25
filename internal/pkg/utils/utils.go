@@ -25,6 +25,10 @@ func WriteJSON(w http.ResponseWriter, status int, payload any) error {
 	return json.NewEncoder(w).Encode(payload)
 }
 
-func WriteError(w http.ResponseWriter, status int, err error) {
-	WriteJSON(w, status, ErrorResponse{Message: err.Error(), Code: 0})
+func WriteError(w http.ResponseWriter, status int, req http.Request, err error) {
+	WriteJSON(w, status, ErrorResponse{Message: err.Error(), RequestID: GetRequestID(req), Code: 0})
+}
+
+func GetRequestID(r http.Request) string {
+	return r.Header.Get("X-Request-ID")
 }

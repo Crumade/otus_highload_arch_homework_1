@@ -2,37 +2,42 @@ package server
 
 import (
 	"log"
+	"log/slog"
 	"net/http"
 	"social_network/internal/pkg/storage"
-	"time"
 )
 
-func RunServer() {
+func RunServer(s *http.Server) {
 
-	connDB, err := storage.NewConnection()
+	pg := new(storage.PostgresDB)
+	err := pg.NewConnection()
 	if err != nil {
-		log.Fatal("Ошибка: не удалось подключиться к БД")
+		log.Fatal("DB connection failure")
 	}
-	defer connDB.Close()
+	defer pg.Conn.Close()
 
-	storage.MigrateSchema(connDB)
-	log.Println("DB connection success")
+	cache := new(storage.CacheDB)
+	err = cache.NewRedisConnection()
+	if err != nil {
+		log.Fatalf("Redis error: " + err.Error())
+	}
 
-	err = storage.MigrateUsers(connDB)
+	storage.MigrateSchema(pg.Conn)
+	slog.Info("DB connection success")
+
+	err = storage.MigrateUsers(pg.Conn)
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = storage.MigratePosts(pg.Conn)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	router := NewRouter(connDB)
+	cache.Warming()
 
-	s := &http.Server{
-		Addr:           ":8080",
-		Handler:        router,
-		ReadTimeout:    10 * time.Second,
-		WriteTimeout:   10 * time.Second,
-		MaxHeaderBytes: 1 << 20,
-	}
+	s.Handler = NewRouter(pg.Conn, cache.Conn)
 
-	log.Println("starting server on :8080")
+	slog.Info("server running on port 8080")
 	log.Fatal(s.ListenAndServe())
 }

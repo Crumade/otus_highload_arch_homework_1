@@ -1,0 +1,280 @@
+{
+	"log": {
+		"version": "1.2",
+		"creator": {
+			"name": "Insomnia REST Client",
+			"version": "insomnia.desktop.app:v9.3.3"
+		},
+		"entries": [
+			{
+				"startedDateTime": "2024-08-13T14:01:00.362Z",
+				"time": 68.691,
+				"request": {
+					"method": "GET",
+					"url": "http://localhost:8080/user/search",
+					"httpVersion": "HTTP/1.1",
+					"cookies": [],
+					"headers": [
+						{
+							"name": "User-Agent",
+							"value": "insomnia/9.3.3"
+						}
+					],
+					"queryString": [
+						{
+							"name": "first_name",
+							"value": "Алекса"
+						},
+						{
+							"name": "last_name",
+							"value": "Роб"
+						}
+					],
+					"postData": {
+						"mimeType": "",
+						"text": ""
+					},
+					"headersSize": -1,
+					"bodySize": -1
+				},
+				"response": {
+					"status": 200,
+					"statusText": "OK",
+					"httpVersion": "HTTP/1.1",
+					"cookies": [],
+					"headers": [
+						{
+							"name": "Content-Type",
+							"value": "application/json"
+						},
+						{
+							"name": "Date",
+							"value": "Tue, 13 Aug 2024 13:57:49 GMT"
+						},
+						{
+							"name": "Transfer-Encoding",
+							"value": "chunked"
+						}
+					],
+					"content": {
+						"size": 2298,
+						"mimeType": "application/json",
+						"text": "[{\"id\":\"00383995-d7dc-44ad-8a9a-da36d1303852\",\"first_name\":\"Роберт\",\"second_name\":\"Александров\",\"birthdate\":\"1984-01-01\",\"gender\":\"\",\"biography\":\"\",\"city\":\"Красноярск\"},{\"id\":\"1818d963-c51a-4761-b850-604d6e69bdf3\",\"first_name\":\"Роберт\",\"second_name\":\"Александров\",\"birthdate\":\"1977-01-01\",\"gender\":\"\",\"biography\":\"\",\"city\":\"Вольск\"},{\"id\":\"2c84ad6d-38a8-4d8d-80a8-2ea8003377f8\",\"first_name\":\"Роберт\",\"second_name\":\"Александров\",\"birthdate\":\"1959-01-01\",\"gender\":\"\",\"biography\":\"\",\"city\":\"Троицк\"},{\"id\":\"39659a22-6491-4630-b344-6bf29ab1216e\",\"first_name\":\"Роберт\",\"second_name\":\"Александров\",\"birthdate\":\"2008-01-01\",\"gender\":\"\",\"biography\":\"\",\"city\":\"Смоленск\"},{\"id\":\"68f63cee-665d-47a0-a396-001930511390\",\"first_name\":\"Роберт\",\"second_name\":\"Александров\",\"birthdate\":\"1935-01-01\",\"gender\":\"\",\"biography\":\"\",\"city\":\"Череповец\"},{\"id\":\"6b9ca218-9e92-4a64-bab5-fea9670f92b7\",\"first_name\":\"Роберт\",\"second_name\":\"Александров\",\"birthdate\":\"2009-01-01\",\"gender\":\"\",\"biography\":\"\",\"city\":\"Черкесск\"},{\"id\":\"7a2f612b-1c41-446f-9c4e-0380cb18f09d\",\"first_name\":\"Роберт\",\"second_name\":\"Александров\",\"birthdate\":\"1910-01-01\",\"gender\":\"\",\"biography\":\"\",\"city\":\"Находка\"},{\"id\":\"89d217ac-3cc5-4144-80a2-e51418a9a115\",\"first_name\":\"Роберт\",\"second_name\":\"Александров\",\"birthdate\":\"1976-01-01\",\"gender\":\"\",\"biography\":\"\",\"city\":\"Каспийск\"},{\"id\":\"908cb4ea-9de8-4d43-a424-0486499e5c6f\",\"first_name\":\"Роберт\",\"second_name\":\"Александров\",\"birthdate\":\"1934-01-01\",\"gender\":\"\",\"biography\":\"\",\"city\":\"Ессентуки\"},{\"id\":\"9f25f3a2-bb09-4272-a013-8f6bf1005c0e\",\"first_name\":\"Роберт\",\"second_name\":\"Александров\",\"birthdate\":\"1949-01-01\",\"gender\":\"\",\"biography\":\"\",\"city\":\"Избербаш\"},{\"id\":\"a6f8851a-7ab7-435b-8bbf-982bdcffc3d2\",\"first_name\":\"Роберт\",\"second_name\":\"Александров\",\"birthdate\":\"2010-01-01\",\"gender\":\"\",\"biography\":\"\",\"city\":\"Междуреченск\"},{\"id\":\"e97a73bd-2d21-4d90-a426-6fa55ed256ee\",\"first_name\":\"Роберт\",\"second_name\":\"Александров\",\"birthdate\":\"1927-01-01\",\"gender\":\"\",\"biography\":\"\",\"city\":\"Дербент\"}]\n"
+					},
+					"redirectURL": "",
+					"headersSize": -1,
+					"bodySize": -1
+				},
+				"cache": {},
+				"timings": {
+					"blocked": -1,
+					"dns": -1,
+					"connect": -1,
+					"send": 0,
+					"wait": 68.691,
+					"receive": 0,
+					"ssl": -1
+				},
+				"comment": "user/search"
+			},
+			{
+				"startedDateTime": "2024-08-13T14:01:00.362Z",
+				"time": 17.698999999999998,
+				"request": {
+					"method": "GET",
+					"url": "http://localhost:8080/user/get/cf5d53e8-2844-457f-825f-bb3bf6c01ee1",
+					"httpVersion": "HTTP/1.1",
+					"cookies": [],
+					"headers": [
+						{
+							"name": "Content-Type",
+							"value": "application/json"
+						},
+						{
+							"name": "User-Agent",
+							"value": "insomnia/9.2.0"
+						}
+					],
+					"queryString": [],
+					"postData": {
+						"mimeType": "application/json",
+						"text": ""
+					},
+					"headersSize": -1,
+					"bodySize": -1
+				},
+				"response": {
+					"status": 200,
+					"statusText": "OK",
+					"httpVersion": "HTTP/1.1",
+					"cookies": [],
+					"headers": [
+						{
+							"name": "Content-Type",
+							"value": "application/json"
+						},
+						{
+							"name": "Date",
+							"value": "Tue, 13 Aug 2024 13:55:10 GMT"
+						},
+						{
+							"name": "Content-Length",
+							"value": "136"
+						}
+					],
+					"content": {
+						"size": 136,
+						"mimeType": "application/json",
+						"text": "{\"first_name\":\"Vanya\",\"second_name\":\"Ivanov\",\"birthdate\":\"1999-01-01\",\"gender\":\"male\",\"biography\":\"tennis, backetball\",\"city\":\"Moscow\"}\n"
+					},
+					"redirectURL": "",
+					"headersSize": -1,
+					"bodySize": -1
+				},
+				"cache": {},
+				"timings": {
+					"blocked": -1,
+					"dns": -1,
+					"connect": -1,
+					"send": 0,
+					"wait": 17.698999999999998,
+					"receive": 0,
+					"ssl": -1
+				},
+				"comment": "user/get"
+			},
+			{
+				"startedDateTime": "2024-08-13T14:01:00.362Z",
+				"time": 44.159,
+				"request": {
+					"method": "POST",
+					"url": "http://localhost:8080/login",
+					"httpVersion": "HTTP/1.1",
+					"cookies": [],
+					"headers": [
+						{
+							"name": "Content-Type",
+							"value": "application/json"
+						},
+						{
+							"name": "User-Agent",
+							"value": "insomnia/9.2.0"
+						}
+					],
+					"queryString": [],
+					"postData": {
+						"mimeType": "application/json",
+						"text": "{\n\t\"id\":\"cf5d53e8-2844-457f-825f-bb3bf6c01ee1\",\n\t\"password\":\"ddcam42Hax\"\n}"
+					},
+					"headersSize": -1,
+					"bodySize": -1
+				},
+				"response": {
+					"status": 202,
+					"statusText": "Accepted",
+					"httpVersion": "HTTP/1.1",
+					"cookies": [],
+					"headers": [
+						{
+							"name": "Content-Type",
+							"value": "application/json"
+						},
+						{
+							"name": "Date",
+							"value": "Tue, 13 Aug 2024 13:55:32 GMT"
+						},
+						{
+							"name": "Content-Length",
+							"value": "49"
+						}
+					],
+					"content": {
+						"size": 49,
+						"mimeType": "application/json",
+						"text": "{\"token\":\"7b365cf5-f9e2-41d4-a5a1-992d20d81dea\"}\n"
+					},
+					"redirectURL": "",
+					"headersSize": -1,
+					"bodySize": -1
+				},
+				"cache": {},
+				"timings": {
+					"blocked": -1,
+					"dns": -1,
+					"connect": -1,
+					"send": 0,
+					"wait": 44.159,
+					"receive": 0,
+					"ssl": -1
+				},
+				"comment": "login"
+			},
+			{
+				"startedDateTime": "2024-08-13T14:01:00.362Z",
+				"time": 39.056,
+				"request": {
+					"method": "POST",
+					"url": "http://localhost:8080/user/register",
+					"httpVersion": "HTTP/1.1",
+					"cookies": [],
+					"headers": [
+						{
+							"name": "Content-Type",
+							"value": "application/json"
+						},
+						{
+							"name": "User-Agent",
+							"value": "insomnia/9.2.0"
+						}
+					],
+					"queryString": [],
+					"postData": {
+						"mimeType": "application/json",
+						"text": "{\n\t\"first_name\":\"Vanya\",\n\t\"second_name\":\"Ivanov\",\n\t\"birthdate\":\"1999-01-01\",\n\t\"gender\":\"male\",\n\t\"biography\":\"tennis, backetball\",\n\t\"city\":\"Moscow\",\n\t\"password\":\"ddcam42Hax\"\n}"
+					},
+					"headersSize": -1,
+					"bodySize": -1
+				},
+				"response": {
+					"status": 201,
+					"statusText": "Created",
+					"httpVersion": "HTTP/1.1",
+					"cookies": [],
+					"headers": [
+						{
+							"name": "Content-Type",
+							"value": "application/json"
+						},
+						{
+							"name": "Date",
+							"value": "Tue, 13 Aug 2024 13:54:51 GMT"
+						},
+						{
+							"name": "Content-Length",
+							"value": "51"
+						}
+					],
+					"content": {
+						"size": 51,
+						"mimeType": "application/json",
+						"text": "{\"user_id\":\"cf5d53e8-2844-457f-825f-bb3bf6c01ee1\"}\n"
+					},
+					"redirectURL": "",
+					"headersSize": -1,
+					"bodySize": -1
+				},
+				"cache": {},
+				"timings": {
+					"blocked": -1,
+					"dns": -1,
+					"connect": -1,
+					"send": 0,
+					"wait": 39.056,
+					"receive": 0,
+					"ssl": -1
+				},
+				"comment": "user/register"
+			}
+		]
+	}
+}
