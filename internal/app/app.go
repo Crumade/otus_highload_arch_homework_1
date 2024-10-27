@@ -1,22 +1,23 @@
 package app
 
 import (
+	"log"
 	"log/slog"
-	"net/http"
 	"os"
+	"social_network/internal/pkg/storage"
 	"social_network/internal/server"
-	"time"
 )
 
 type Application struct {
-	Logger *slog.Logger
-	Server *http.Server
+	Logger  *slog.Logger
+	CacheDB *storage.CacheDB
+	PG      *storage.PostgresDB
 }
 
 func (app *Application) Run() {
 	app.NewLogger()
-	app.NewServer()
-	server.RunServer(app.Server)
+	app.InitDB()
+	server.RunServer(app.PG, app.CacheDB)
 }
 
 func (app *Application) NewLogger() {
@@ -24,11 +25,31 @@ func (app *Application) NewLogger() {
 	slog.SetDefault(app.Logger)
 }
 
-func (app *Application) NewServer() {
-	app.Server = &http.Server{
-		Addr:           ":8080",
-		ReadTimeout:    10 * time.Second,
-		WriteTimeout:   10 * time.Second,
-		MaxHeaderBytes: 1 << 20,
+func (app *Application) InitDB() {
+	app.PG = new(storage.PostgresDB)
+	err := app.PG.NewConnection()
+	if err != nil {
+		log.Fatal("DB connection failure")
 	}
+	//defer app.PG.Conn.Close()
+
+	cache := new(storage.CacheDB)
+	err = cache.NewRedisConnection()
+	if err != nil {
+		log.Fatalf("Redis error: " + err.Error())
+	}
+
+	app.PG.MigrateSchema()
+	slog.Info("DB connection success")
+
+	err = app.PG.MigrateUsers()
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = app.PG.MigratePosts()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	cache.Warming()
 }

@@ -5,38 +5,17 @@ import (
 	"log/slog"
 	"net/http"
 	"social_network/internal/pkg/storage"
+	"time"
 )
 
-func RunServer(s *http.Server) {
-
-	pg := new(storage.PostgresDB)
-	err := pg.NewConnection()
-	if err != nil {
-		log.Fatal("DB connection failure")
+func RunServer(pg *storage.PostgresDB, cache *storage.CacheDB) {
+	s := &http.Server{
+		Addr:           ":8080",
+		Handler:        NewRouter(pg.Conn /*, cache.Conn*/),
+		ReadTimeout:    10 * time.Second,
+		WriteTimeout:   10 * time.Second,
+		MaxHeaderBytes: 1 << 20,
 	}
-	defer pg.Conn.Close()
-
-	cache := new(storage.CacheDB)
-	err = cache.NewRedisConnection()
-	if err != nil {
-		log.Fatalf("Redis error: " + err.Error())
-	}
-
-	storage.MigrateSchema(pg.Conn)
-	slog.Info("DB connection success")
-
-	err = storage.MigrateUsers(pg.Conn)
-	if err != nil {
-		log.Fatal(err)
-	}
-	err = storage.MigratePosts(pg.Conn)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	cache.Warming()
-
-	s.Handler = NewRouter(pg.Conn, cache.Conn)
 
 	slog.Info("server running on port 8080")
 	log.Fatal(s.ListenAndServe())

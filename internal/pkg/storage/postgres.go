@@ -48,8 +48,8 @@ func (pg *PostgresDB) NewConnection() error {
 
 	pg.Conn.SetConnMaxIdleTime(time.Second * 30)
 	pg.Conn.SetConnMaxLifetime(time.Second * 30)
-	pg.Conn.SetMaxIdleConns(10)
-	pg.Conn.SetMaxOpenConns(10)
+	pg.Conn.SetMaxIdleConns(100)
+	pg.Conn.SetMaxOpenConns(100)
 
 	if err = pg.Conn.Ping(); err != nil {
 		slog.Error("Ping error: " + err.Error())
@@ -59,8 +59,8 @@ func (pg *PostgresDB) NewConnection() error {
 	return nil
 }
 
-func MigrateSchema(db *sqlx.DB) {
-	driver, err := postgres.WithInstance(db.DB, &postgres.Config{})
+func (pg *PostgresDB) MigrateSchema() {
+	driver, err := postgres.WithInstance(pg.Conn.DB, &postgres.Config{})
 	if err != nil {
 		log.Fatal("Instance error: " + err.Error())
 	}
@@ -75,9 +75,9 @@ func MigrateSchema(db *sqlx.DB) {
 	}
 }
 
-func createIndexes(db *sqlx.DB) error {
+func (pg *PostgresDB) createIndexes() error {
 
-	ext, err := db.Preparex("CREATE EXTENSION pg_trgm;")
+	ext, err := pg.Conn.Preparex("CREATE EXTENSION pg_trgm;")
 	if err != nil {
 		return err
 	}
@@ -86,7 +86,7 @@ func createIndexes(db *sqlx.DB) error {
 		return err
 	}
 
-	index, err := db.Preparex("	CREATE INDEX users_names_idx ON users USING gist(second_name gist_trgm_ops, first_name gist_trgm_ops);")
+	index, err := pg.Conn.Preparex("	CREATE INDEX users_names_idx ON users USING gist(second_name gist_trgm_ops, first_name gist_trgm_ops);")
 	if err != nil {
 		return err
 	}
@@ -97,7 +97,7 @@ func createIndexes(db *sqlx.DB) error {
 	return nil
 }
 
-func MigrateUsers(db *sqlx.DB) error {
+func (pg *PostgresDB) MigrateUsers() error {
 	file, err := os.Open("people.csv")
 	if err != nil {
 		return err
@@ -114,7 +114,7 @@ func MigrateUsers(db *sqlx.DB) error {
 		if err == io.EOF {
 			insertStatement := fmt.Sprintf("INSERT INTO users(first_name, second_name, birthdate, city) VALUES %s", strings.Join(placeholders, ","))
 			//log.Printf("\n%+v", users...)
-			_, err = db.Exec(insertStatement, users...)
+			_, err = pg.Conn.Exec(insertStatement, users...)
 			if err != nil {
 				return err
 			}
@@ -141,7 +141,7 @@ func MigrateUsers(db *sqlx.DB) error {
 		if len(users) == 65000 {
 
 			insertStatement := fmt.Sprintf("INSERT INTO users(first_name, second_name, birthdate, city) VALUES %s", strings.Join(placeholders, ","))
-			_, err = db.Exec(insertStatement, users...)
+			_, err = pg.Conn.Exec(insertStatement, users...)
 			if err != nil {
 				return err
 			}
@@ -151,14 +151,14 @@ func MigrateUsers(db *sqlx.DB) error {
 		}
 	}
 
-	err = createIndexes(db)
+	err = pg.createIndexes()
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func MigratePosts(db *sqlx.DB) error {
+func (pg *PostgresDB) MigratePosts() error {
 	file, err := os.Open("posts.txt")
 	if err != nil {
 		return err
@@ -178,7 +178,7 @@ func MigratePosts(db *sqlx.DB) error {
 			return err
 		}
 		user := new(models.User)
-		err = db.Get(user, `SELECT id
+		err = pg.Conn.Get(user, `SELECT id
 								FROM users 
 								OFFSET floor(random()*8391) 
 								LIMIT 1`)
@@ -197,7 +197,7 @@ func MigratePosts(db *sqlx.DB) error {
 	tempInsert := fmt.Sprintf(`
 					INSERT INTO posts(user_id, content) VALUES %s;`,
 		strings.Join(placeholders, ","))
-	_, err = db.Exec(tempInsert, posts...)
+	_, err = pg.Conn.Exec(tempInsert, posts...)
 	if err != nil {
 		return err
 	}
