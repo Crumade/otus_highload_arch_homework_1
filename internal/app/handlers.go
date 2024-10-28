@@ -1,17 +1,29 @@
-package server
+package app
 
 import (
 	"errors"
-	"log"
 	"net/http"
 	models "social_network/internal/model"
 	utils "social_network/internal/pkg/utils"
-	"social_network/internal/service"
 
-	"github.com/jmoiron/sqlx"
+	"github.com/redis/go-redis/v9"
 )
 
-func login(db *sqlx.DB) http.HandlerFunc {
+type ServiceHandler struct {
+	service Service
+}
+
+type Service interface {
+	Login(*models.LoginRequest) (*models.LoginResponse, error)
+	GetUser(string) (*models.User, error)
+	Register(*models.User) (*models.UserRegisterResponse, error)
+	SearchUser(string, string) (*[]models.User, error)
+	GetPostFeed(*redis.Client, int, int) (*[]models.Post, error)
+	DeletePost(string) (bool, error)
+	GetPost(string) (*models.Post, error)
+}
+
+func (srv ServiceHandler) login() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		loginData := new(models.LoginRequest)
 
@@ -21,7 +33,7 @@ func login(db *sqlx.DB) http.HandlerFunc {
 			return
 		}
 
-		token, err := service.Login(db, loginData)
+		token, err := srv.service.Login(loginData)
 		if err != nil {
 			utils.WriteError(w, http.StatusBadRequest, *r, err)
 			return
@@ -31,7 +43,7 @@ func login(db *sqlx.DB) http.HandlerFunc {
 	}
 }
 
-func register(db *sqlx.DB) http.HandlerFunc {
+func (srv ServiceHandler) register() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		user := new(models.User)
 
@@ -44,7 +56,7 @@ func register(db *sqlx.DB) http.HandlerFunc {
 			utils.WriteError(w, http.StatusBadRequest, *r, errors.New("не передан пароль"))
 			return
 		}
-		result, err := service.Register(db, user)
+		result, err := srv.service.Register(user)
 		if err != nil {
 			utils.WriteError(w, http.StatusBadRequest, *r, err)
 			return
@@ -54,11 +66,11 @@ func register(db *sqlx.DB) http.HandlerFunc {
 	}
 }
 
-func getUserByID(db *sqlx.DB) http.HandlerFunc {
+func (srv ServiceHandler) getUserByID() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := r.PathValue("id")
 
-		result, err := service.GetUser(db, id)
+		result, err := srv.service.GetUser(id)
 		if err != nil {
 			utils.WriteError(w, http.StatusBadRequest, *r, err)
 			return
@@ -68,7 +80,7 @@ func getUserByID(db *sqlx.DB) http.HandlerFunc {
 	}
 }
 
-func searchUser(db *sqlx.DB) http.HandlerFunc {
+func (srv ServiceHandler) searchUser() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		firstName := r.URL.Query().Get("first_name")
 		lastName := r.URL.Query().Get("last_name")
@@ -77,7 +89,7 @@ func searchUser(db *sqlx.DB) http.HandlerFunc {
 			return
 		}
 
-		result, err := service.SearchUser(db, firstName, lastName)
+		result, err := srv.service.SearchUser(firstName, lastName)
 		if err != nil {
 			utils.WriteError(w, http.StatusBadRequest, *r, err)
 			return
@@ -123,10 +135,10 @@ func searchUser(db *sqlx.DB) http.HandlerFunc {
 // 	}
 // }
 
-func getPostByID(db *sqlx.DB) http.HandlerFunc {
+func (srv ServiceHandler) getPostByID() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := r.PathValue("id")
-		result, err := service.GetPost(db, id)
+		result, err := srv.service.GetPost(id)
 		if err != nil {
 			utils.WriteError(w, http.StatusBadRequest, *r, err)
 			return
@@ -136,9 +148,9 @@ func getPostByID(db *sqlx.DB) http.HandlerFunc {
 	}
 }
 
-func createPost(db *sqlx.DB) http.HandlerFunc {
+func (srv ServiceHandler) createPost() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		log.Println(db)
+		//log.Println(db)
 		w.Write([]byte("поcт получен, метод не реализован"))
 		// result, err := service.GetUser(db, id)
 		// if err != nil {
@@ -151,9 +163,9 @@ func createPost(db *sqlx.DB) http.HandlerFunc {
 	}
 }
 
-func updatePost(db *sqlx.DB) http.HandlerFunc {
+func (srv ServiceHandler) updatePost() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		log.Println(db)
+		//log.Println(db)
 		w.Write([]byte("поcт получен, метод не реализован"))
 		// result, err := service.GetUser(db, id)
 		// if err != nil {
@@ -166,10 +178,10 @@ func updatePost(db *sqlx.DB) http.HandlerFunc {
 	}
 }
 
-func deletePost(db *sqlx.DB) http.HandlerFunc {
+func (srv ServiceHandler) deletePost() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := r.PathValue("id")
-		result, err := service.DeletePost(db, id)
+		result, err := srv.service.DeletePost(id)
 		if err != nil {
 			utils.WriteError(w, http.StatusBadRequest, *r, err)
 			return
@@ -180,10 +192,10 @@ func deletePost(db *sqlx.DB) http.HandlerFunc {
 	}
 }
 
-func setFriend(db *sqlx.DB) http.HandlerFunc {
+func (srv ServiceHandler) setFriend() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		//id := r.PathValue("user_id")
-		log.Println(db)
+		//log.Println(db)
 		w.Write([]byte("запрос в друзья поулчен, метод не реализован"))
 		// result, err := service.GetUser(db, id)
 		// if err != nil {
@@ -196,10 +208,10 @@ func setFriend(db *sqlx.DB) http.HandlerFunc {
 	}
 }
 
-func deleteFriend(db *sqlx.DB) http.HandlerFunc {
+func (srv ServiceHandler) deleteFriend() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		//id := r.PathValue("user_id")
-		log.Println(db)
+		//log.Println(db)
 		w.Write([]byte("запрос на удаление получен, метод не реализован"))
 		// result, err := service.GetUser(db, id)
 		// if err != nil {

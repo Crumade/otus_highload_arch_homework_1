@@ -2,32 +2,30 @@ package service
 
 import (
 	models "social_network/internal/model"
-	"social_network/internal/pkg/storage"
 
 	"github.com/google/uuid"
-	"github.com/jmoiron/sqlx"
 )
 
-func GetUser(db *sqlx.DB, id string) (*models.User, error) {
+func (srv *Service) GetUser(id string) (*models.User, error) {
 	_, err := uuid.Parse(id)
 	if err != nil {
 		return nil, err
 	}
-	user, err := storage.GetUserByID(db, id)
+	user, err := srv.userRepo.GetUserByID(id) //storage.GetUserByID(db, id)
 	if err != nil {
 		return nil, err
 	}
 	return user, nil
 }
 
-func Register(db *sqlx.DB, user *models.User) (*models.UserRegisterResponse, error) {
-	newUser, err := storage.CreateUser(db, user)
+func (srv *Service) Register(user *models.User) (*models.UserRegisterResponse, error) {
+	newUser, err := srv.userRepo.CreateUser(user) //storage.CreateUser(db, user)
 	if err != nil {
 		return nil, err
 	}
 	salt := uuid.NewMD5(uuid.New(), []byte(user.Password))
 	passwordHash := HashedPassword(user.Password, salt.String())
-	err = storage.CreateAuthData(db, newUser.UserID, passwordHash, salt.String())
+	err = srv.userRepo.CreateAuthData(newUser.UserID, passwordHash, salt.String()) //storage.CreateAuthData(db, newUser.UserID, passwordHash, salt.String())
 	if err != nil {
 		return nil, err
 	}
@@ -35,9 +33,9 @@ func Register(db *sqlx.DB, user *models.User) (*models.UserRegisterResponse, err
 	return newUser, nil
 }
 
-func SearchUser(db *sqlx.DB, firstName string, lastName string) (*[]models.User, error) {
+func (srv *Service) SearchUser(firstName string, lastName string) (*[]models.User, error) {
 
-	users, err := storage.SearchUser(db, firstName, lastName)
+	users, err := srv.userRepo.SearchUser(firstName, lastName) //storage.SearchUser(db, firstName, lastName)
 	if err != nil {
 		return nil, err
 	}

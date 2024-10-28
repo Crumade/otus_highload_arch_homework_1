@@ -5,21 +5,18 @@ import (
 	"errors"
 	"fmt"
 	models "social_network/internal/model"
-	"social_network/internal/pkg/storage"
-
-	"github.com/jmoiron/sqlx"
 )
 
-func Login(db *sqlx.DB, loginData *models.LoginRequest) (*models.LoginResponse, error) {
+func (srv *Service) Login(loginData *models.LoginRequest) (*models.LoginResponse, error) {
 
-	authData, err := storage.GetAuthData(db, loginData)
+	authData, err := srv.userRepo.GetAuthData(loginData) //storage.GetAuthData(db, loginData)
 	if err != nil {
 		return nil, err
 	}
 
 	if authData.PasswordHash == HashedPassword(loginData.Password, authData.Salt) {
 
-		token, err := storage.CreateAccessToken(db, loginData.UserID)
+		token, err := srv.userRepo.CreateAccessToken(loginData.UserID) //storage.CreateAccessToken(db, loginData.UserID)
 		if err != nil || token == "" {
 			return nil, err
 		}

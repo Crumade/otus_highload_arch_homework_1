@@ -2,53 +2,62 @@ package app
 
 import (
 	"log"
-	"log/slog"
-	"os"
 	"social_network/internal/pkg/storage"
-	"social_network/internal/server"
+	"social_network/internal/service"
+
+	"github.com/jmoiron/sqlx"
+	"go.uber.org/zap"
 )
 
 type Application struct {
-	Logger  *slog.Logger
-	CacheDB *storage.CacheDB
-	PG      *storage.PostgresDB
+	service Service
+	logger  *zap.Logger
+	cache   *storage.CacheDB
+	pg      *storage.PostgresDB
 }
 
 func (app *Application) Run() {
-	app.NewLogger()
-	app.InitDB()
-	server.RunServer(app.PG, app.CacheDB)
-}
+	app.NewZapLogger()
 
-func (app *Application) NewLogger() {
-	app.Logger = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
-	slog.SetDefault(app.Logger)
-}
-
-func (app *Application) InitDB() {
-	app.PG = new(storage.PostgresDB)
-	err := app.PG.NewConnection()
+	db, err := storage.NewConnection()
 	if err != nil {
-		log.Fatal("DB connection failure")
+		app.logger.Fatal("DB connection error", zap.Error(err))
 	}
-	//defer app.PG.Conn.Close()
+	defer db.Close()
+	app.InitDB(db)
 
+	userRepo := storage.NewUserRepo(db)
+	postsRepo := storage.NewPostsRepo(db)
+
+	app.service = service.NewService(userRepo, postsRepo, app.logger)
+	app.RunServer()
+}
+
+func (app *Application) NewZapLogger() {
+	var err error
+	app.logger, err = zap.NewProduction()
+	if err != nil {
+		log.Fatal("logger failure")
+	}
+}
+
+func (app *Application) InitDB(db *sqlx.DB) {
 	cache := new(storage.CacheDB)
-	err = cache.NewRedisConnection()
+	err := cache.NewRedisConnection()
 	if err != nil {
-		log.Fatalf("Redis error: " + err.Error())
+		app.logger.Fatal("Redis error", zap.Error(err))
 	}
 
-	app.PG.MigrateSchema()
-	slog.Info("DB connection success")
+	storage.MigrateSchema(db)
+	app.logger.Info("DB connection success")
 
-	err = app.PG.MigrateUsers()
+	err = storage.MigrateUsers(db)
 	if err != nil {
-		log.Fatal(err)
+		app.logger.Fatal("User migration error", zap.Error(err))
 	}
-	err = app.PG.MigratePosts()
+	err = storage.MigratePosts(db)
 	if err != nil {
-		log.Fatal(err)
+		app.logger.Fatal("Posts migration error", zap.Error(err))
 	}
 
 	cache.Warming()

@@ -2,9 +2,7 @@ package storage
 
 import (
 	"bufio"
-	"database/sql"
 	"encoding/csv"
-	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -17,7 +15,6 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
-	"github.com/google/uuid"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/jmoiron/sqlx"
 )
@@ -34,33 +31,33 @@ type PostgresDB struct {
 	Conn *sqlx.DB
 }
 
-func (pg *PostgresDB) NewConnection() error {
+func NewConnection() (*sqlx.DB, error) {
 	connString := fmt.Sprintf(
 		"host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
 		HOST, PORT, USER, PASSWORD, DBNAME,
 	)
 	var err error
-	pg.Conn, err = sqlx.Connect("pgx", connString)
+	conn, err := sqlx.Connect("pgx", connString)
 	if err != nil {
 		slog.Error("Connection error: " + err.Error())
-		return err
+		return nil, err
 	}
 
-	pg.Conn.SetConnMaxIdleTime(time.Second * 30)
-	pg.Conn.SetConnMaxLifetime(time.Second * 30)
-	pg.Conn.SetMaxIdleConns(100)
-	pg.Conn.SetMaxOpenConns(100)
+	conn.SetConnMaxIdleTime(time.Second * 30)
+	conn.SetConnMaxLifetime(time.Second * 30)
+	conn.SetMaxIdleConns(100)
+	conn.SetMaxOpenConns(100)
 
-	if err = pg.Conn.Ping(); err != nil {
+	if err = conn.Ping(); err != nil {
 		slog.Error("Ping error: " + err.Error())
-		return err
+		return nil, err
 	}
 
-	return nil
+	return conn, nil
 }
 
-func (pg *PostgresDB) MigrateSchema() {
-	driver, err := postgres.WithInstance(pg.Conn.DB, &postgres.Config{})
+func MigrateSchema(db *sqlx.DB) {
+	driver, err := postgres.WithInstance(db.DB, &postgres.Config{})
 	if err != nil {
 		log.Fatal("Instance error: " + err.Error())
 	}
@@ -75,9 +72,9 @@ func (pg *PostgresDB) MigrateSchema() {
 	}
 }
 
-func (pg *PostgresDB) createIndexes() error {
+func createIndexes(db *sqlx.DB) error {
 
-	ext, err := pg.Conn.Preparex("CREATE EXTENSION pg_trgm;")
+	ext, err := db.Preparex("CREATE EXTENSION pg_trgm;")
 	if err != nil {
 		return err
 	}
@@ -86,7 +83,7 @@ func (pg *PostgresDB) createIndexes() error {
 		return err
 	}
 
-	index, err := pg.Conn.Preparex("	CREATE INDEX users_names_idx ON users USING gist(second_name gist_trgm_ops, first_name gist_trgm_ops);")
+	index, err := db.Preparex("	CREATE INDEX users_names_idx ON users USING gist(second_name gist_trgm_ops, first_name gist_trgm_ops);")
 	if err != nil {
 		return err
 	}
@@ -97,7 +94,7 @@ func (pg *PostgresDB) createIndexes() error {
 	return nil
 }
 
-func (pg *PostgresDB) MigrateUsers() error {
+func MigrateUsers(db *sqlx.DB) error {
 	file, err := os.Open("people.csv")
 	if err != nil {
 		return err
@@ -114,7 +111,7 @@ func (pg *PostgresDB) MigrateUsers() error {
 		if err == io.EOF {
 			insertStatement := fmt.Sprintf("INSERT INTO users(first_name, second_name, birthdate, city) VALUES %s", strings.Join(placeholders, ","))
 			//log.Printf("\n%+v", users...)
-			_, err = pg.Conn.Exec(insertStatement, users...)
+			_, err = db.Exec(insertStatement, users...)
 			if err != nil {
 				return err
 			}
@@ -141,7 +138,7 @@ func (pg *PostgresDB) MigrateUsers() error {
 		if len(users) == 65000 {
 
 			insertStatement := fmt.Sprintf("INSERT INTO users(first_name, second_name, birthdate, city) VALUES %s", strings.Join(placeholders, ","))
-			_, err = pg.Conn.Exec(insertStatement, users...)
+			_, err = db.Exec(insertStatement, users...)
 			if err != nil {
 				return err
 			}
@@ -151,14 +148,14 @@ func (pg *PostgresDB) MigrateUsers() error {
 		}
 	}
 
-	err = pg.createIndexes()
+	err = createIndexes(db)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (pg *PostgresDB) MigratePosts() error {
+func MigratePosts(db *sqlx.DB) error {
 	file, err := os.Open("posts.txt")
 	if err != nil {
 		return err
@@ -178,7 +175,7 @@ func (pg *PostgresDB) MigratePosts() error {
 			return err
 		}
 		user := new(models.User)
-		err = pg.Conn.Get(user, `SELECT id
+		err = db.Get(user, `SELECT id
 								FROM users 
 								OFFSET floor(random()*8391) 
 								LIMIT 1`)
@@ -197,7 +194,7 @@ func (pg *PostgresDB) MigratePosts() error {
 	tempInsert := fmt.Sprintf(`
 					INSERT INTO posts(user_id, content) VALUES %s;`,
 		strings.Join(placeholders, ","))
-	_, err = pg.Conn.Exec(tempInsert, posts...)
+	_, err = db.Exec(tempInsert, posts...)
 	if err != nil {
 		return err
 	}
@@ -207,148 +204,4 @@ func (pg *PostgresDB) MigratePosts() error {
 	index = 0
 	slog.Info(fmt.Sprintf("Для добавления постов в БД прошло времени %.2f c", time.Since(start).Seconds()))
 	return nil
-}
-
-func GetUserByID(db *sqlx.DB, id string) (*models.User, error) {
-	user := new(models.User)
-
-	err := db.Get(user, "SELECT first_name, second_name, birthdate, gender, biography, city FROM public.users WHERE id = $1", id)
-	if err == sql.ErrNoRows {
-		err := errors.New("user not found")
-		return nil, err
-	} else if err != nil {
-		return nil, err
-	}
-
-	return user, nil
-}
-
-func SearchUser(db *sqlx.DB, firstName string, lastName string) (*[]models.User, error) {
-	users := new([]models.User)
-	stm, err := db.Preparex(`SELECT id,
-						first_name, 
-						second_name, 
-						birthdate, 
-						coalesce(gender, '') as gender, 
-						coalesce(biography, '') as biography, 
-						city 
-					FROM public.users 
-					WHERE second_name like  $1 
-					AND first_name like $2
-					ORDER BY id`)
-	if err != nil {
-		return nil, err
-	}
-
-	err = stm.Select(users, lastName+"%", firstName+"%")
-	if err == sql.ErrNoRows {
-		err := errors.New("user not found")
-		return nil, err
-	} else if err != nil {
-		return nil, err
-	}
-	return users, nil
-}
-
-func CreateUser(db *sqlx.DB, user *models.User) (*models.UserRegisterResponse, error) {
-	result := new(models.UserRegisterResponse)
-	rows, err := db.NamedQuery(`INSERT INTO users (first_name, second_name, birthdate, gender, biography, city) 
-				VALUES(:first_name, :second_name, :birthdate, :gender, :biography, :city)
-				RETURNING id;`, user)
-	if err != nil {
-		return nil, err
-	}
-
-	defer rows.Close()
-	if rows.Next() {
-		err := rows.StructScan(result)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return result, nil
-}
-
-func GetAuthData(db *sqlx.DB, loginData *models.LoginRequest) (*models.AuthData, error) {
-	authData := new(models.AuthData)
-	err := db.Get(authData, "SELECT password_hash, salt FROM public.user_data WHERE user_id = $1", loginData.UserID)
-	if err == sql.ErrNoRows {
-		err := errors.New("user not found")
-		return nil, err
-	} else if err != nil {
-		return nil, err
-	}
-
-	return authData, nil
-}
-
-func CreateAccessToken(db *sqlx.DB, userID string) (string, error) {
-	token := uuid.New().String()
-
-	_, err := db.Exec("INSERT INTO tokens(access_token, user_id) VALUES($1, $2)", token, userID)
-	if err != nil {
-		return "", err
-	}
-	return token, nil
-}
-
-func CreateAuthData(db *sqlx.DB, userID string, passwordHash string, salt string) error {
-	_, err := db.Exec("INSERT INTO user_data(user_id, password_hash, salt) VALUES($1, $2, $3)", userID, passwordHash, salt)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func GetPostFeed(db *sqlx.DB, offset int, limit int) (*[]models.Post, error) {
-	posts := new([]models.Post)
-	stm, err := db.Preparex(`SELECT id,
-								user_id,
-								content
-							FROM public.posts 
-							OFFSET $1
-							LIMIT $2;
-							`)
-	if err != nil {
-		return nil, err
-	}
-
-	err = stm.Select(posts, offset, limit)
-	if err == sql.ErrNoRows {
-		err := errors.New("posts not found")
-		return nil, err
-	} else if err != nil {
-		return nil, err
-	}
-	return posts, nil
-}
-
-func GetPostByID(db *sqlx.DB, id string) (*models.Post, error) {
-	post := new(models.Post)
-
-	err := db.Get(post, "SELECT id, user_id, content FROM public.posts WHERE id = $1", id)
-	if err == sql.ErrNoRows {
-		err := errors.New("post not found")
-		return nil, err
-	} else if err != nil {
-		return nil, err
-	}
-
-	return post, nil
-}
-
-func DeletePost(db *sqlx.DB, id string) (bool, error) {
-	stm, err := db.Preparex("DELETE FROM public.posts WHERE id = $1:")
-	if err != nil {
-		return false, err
-	}
-
-	_, err = stm.Exec(id)
-	if err != nil {
-		return false, err
-	}
-
-	return true, nil
 }
