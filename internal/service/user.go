@@ -6,7 +6,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func (srv *Service) GetUser(id string) (*models.User, error) {
+func (srv *service) GetUser(id string) (*models.User, error) {
 	_, err := uuid.Parse(id)
 	if err != nil {
 		return nil, err
@@ -18,7 +18,7 @@ func (srv *Service) GetUser(id string) (*models.User, error) {
 	return user, nil
 }
 
-func (srv *Service) Register(user *models.User) (*models.UserRegisterResponse, error) {
+func (srv *service) Register(user *models.User) (*models.UserRegisterResponse, error) {
 	newUser, err := srv.userRepo.CreateUser(user) //storage.CreateUser(db, user)
 	if err != nil {
 		return nil, err
@@ -33,7 +33,7 @@ func (srv *Service) Register(user *models.User) (*models.UserRegisterResponse, e
 	return newUser, nil
 }
 
-func (srv *Service) SearchUser(firstName string, lastName string) (*[]models.User, error) {
+func (srv *service) SearchUser(firstName string, lastName string) (*[]models.User, error) {
 
 	users, err := srv.userRepo.SearchUser(firstName, lastName) //storage.SearchUser(db, firstName, lastName)
 	if err != nil {

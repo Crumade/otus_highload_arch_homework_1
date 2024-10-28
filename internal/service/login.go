@@ -7,7 +7,7 @@ import (
 	models "social_network/internal/model"
 )
 
-func (srv *Service) Login(loginData *models.LoginRequest) (*models.LoginResponse, error) {
+func (srv *service) Login(loginData *models.LoginRequest) (*models.LoginResponse, error) {
 
 	authData, err := srv.userRepo.GetAuthData(loginData) //storage.GetAuthData(db, loginData)
 	if err != nil {

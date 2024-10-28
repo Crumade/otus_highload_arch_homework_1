@@ -6,14 +6,14 @@ import (
 	"go.uber.org/zap"
 )
 
-type Service struct {
+type service struct {
 	userRepo  userRepo
 	postsRepo postsRepo
 	logger    *zap.Logger
 }
 
-func NewService(userRepo userRepo, postsRepo postsRepo, logger *zap.Logger) *Service {
-	return &Service{
+func NewService(userRepo userRepo, postsRepo postsRepo, logger *zap.Logger) *service {
+	return &service{
 		userRepo:  userRepo,
 		postsRepo: postsRepo,
 		logger:    logger}

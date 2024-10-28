@@ -7,7 +7,7 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-func (srv *Service) GetPostFeed(cache *redis.Client, offset int, limit int) (*[]models.Post, error) {
+func (srv *service) GetPostFeed(cache *redis.Client, offset int, limit int) (*[]models.Post, error) {
 
 	posts, err := srv.postsRepo.GetPostFeed(offset, limit) //storage.GetPostFeed(db, offset, limit)
 	if err != nil {
@@ -16,7 +16,7 @@ func (srv *Service) GetPostFeed(cache *redis.Client, offset int, limit int) (*[]
 	return posts, nil
 }
 
-func (srv *Service) DeletePost(id string) (bool, error) {
+func (srv *service) DeletePost(id string) (bool, error) {
 	_, err := uuid.Parse(id)
 	if err != nil {
 		return false, err
@@ -29,7 +29,7 @@ func (srv *Service) DeletePost(id string) (bool, error) {
 	return result, nil
 }
 
-func (srv *Service) GetPost(id string) (*models.Post, error) {
+func (srv *service) GetPost(id string) (*models.Post, error) {
 	_, err := uuid.Parse(id)
 	if err != nil {
 		return nil, err
