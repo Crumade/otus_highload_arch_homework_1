@@ -12,8 +12,6 @@ import (
 type Application struct {
 	service Service
 	logger  *zap.Logger
-	cache   *storage.CacheDB
-	pg      *storage.PostgresDB
 }
 
 func (app *Application) Run() {
@@ -24,8 +22,14 @@ func (app *Application) Run() {
 		app.logger.Fatal("DB connection error", zap.Error(err))
 	}
 	defer db.Close()
-	app.InitDB(db)
 
+	cache, err := storage.NewRedisConnection()
+	if err != nil {
+		app.logger.Fatal("Redis error", zap.Error(err))
+	}
+
+	app.InitDB(db)
+	storage.Warming(cache)
 	userRepo := storage.NewUserRepo(db)
 	postsRepo := storage.NewPostsRepo(db)
 
@@ -42,16 +46,11 @@ func (app *Application) NewZapLogger() {
 }
 
 func (app *Application) InitDB(db *sqlx.DB) {
-	cache := new(storage.CacheDB)
-	err := cache.NewRedisConnection()
-	if err != nil {
-		app.logger.Fatal("Redis error", zap.Error(err))
-	}
 
 	storage.MigrateSchema(db)
 	app.logger.Info("DB connection success")
 
-	err = storage.MigrateUsers(db)
+	err := storage.MigrateUsers(db)
 	if err != nil {
 		app.logger.Fatal("User migration error", zap.Error(err))
 	}
@@ -59,6 +58,4 @@ func (app *Application) InitDB(db *sqlx.DB) {
 	if err != nil {
 		app.logger.Fatal("Posts migration error", zap.Error(err))
 	}
-
-	cache.Warming()
 }

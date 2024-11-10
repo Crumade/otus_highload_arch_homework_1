@@ -14,3 +14,8 @@ type User struct {
 type UserRegisterResponse struct {
 	UserID string `json:"user_id" db:"id"`
 }
+
+type Friends struct {
+	UserID       string `json:"user_id,omitempty" db:"user_id"`
+	FriendUserID string `json:"friend_user_id" db:"friend_user_id"`
+}

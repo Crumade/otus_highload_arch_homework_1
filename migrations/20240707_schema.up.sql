@@ -25,3 +25,21 @@ CREATE TABLE IF NOT EXISTS tokens(
 	access_token uuid PRIMARY KEY NOT NULL,
 	user_id uuid NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS public.friends
+(
+    user_id uuid NOT NULL,
+    friend_user_id uuid NOT NULL,
+    created_at timestamp with time zone NOT NULL DEFAULT now(),
+    CONSTRAINT friends_pkey PRIMARY KEY (user_id, friend_user_id),
+    CONSTRAINT friend_user_id FOREIGN KEY (friend_user_id)
+        REFERENCES public.users (id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION
+        NOT VALID,
+    CONSTRAINT user_id FOREIGN KEY (user_id)
+        REFERENCES public.users (id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION
+        NOT VALID
+)

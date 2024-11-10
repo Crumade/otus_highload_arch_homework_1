@@ -83,11 +83,41 @@ func createIndexes(db *sqlx.DB) error {
 		return err
 	}
 
-	index, err := db.Preparex("	CREATE INDEX users_names_idx ON users USING gist(second_name gist_trgm_ops, first_name gist_trgm_ops);")
+	users_index, err := db.Preparex(`
+	CREATE INDEX users_names_idx ON users USING gist(second_name gist_trgm_ops, first_name gist_trgm_ops);
+	`)
 	if err != nil {
 		return err
 	}
-	_, err = index.Exec()
+	_, err = users_index.Exec()
+	if err != nil {
+		return err
+	}
+
+	friends_index, err := db.Preparex(`
+	CREATE INDEX IF NOT EXISTS fki_friend_user_id
+    ON public.friends USING btree
+    (friend_user_id ASC NULLS LAST)
+    TABLESPACE pg_default;
+	`)
+	if err != nil {
+		return err
+	}
+	_, err = friends_index.Exec()
+	if err != nil {
+		return err
+	}
+
+	fki_users_index, err := db.Preparex(`
+	CREATE INDEX IF NOT EXISTS fki_user_id
+    ON public.friends USING btree
+    (user_id ASC NULLS LAST)
+    TABLESPACE pg_default;
+	`)
+	if err != nil {
+		return err
+	}
+	_, err = fki_users_index.Exec()
 	if err != nil {
 		return err
 	}

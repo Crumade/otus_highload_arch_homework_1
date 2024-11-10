@@ -6,10 +6,12 @@ import (
 	models "social_network/internal/model"
 
 	"github.com/jmoiron/sqlx"
+	"github.com/redis/go-redis/v9"
 )
 
 type postsRepo struct {
-	conn *sqlx.DB
+	conn  *sqlx.DB
+	cache *redis.Client
 }
 
 func NewPostsRepo(db *sqlx.DB) *postsRepo {
@@ -65,4 +67,9 @@ func (db *postsRepo) DeletePost(id string) (bool, error) {
 	}
 
 	return true, nil
+}
+
+func (db *postsRepo) GetPosts(limit int, offset int) (*[]models.Post, error) {
+
+	return nil, nil
 }
