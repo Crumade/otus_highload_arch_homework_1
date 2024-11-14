@@ -6,21 +6,28 @@ import (
 	models "social_network/internal/model"
 
 	"github.com/google/uuid"
-	"github.com/jmoiron/sqlx"
 )
 
+// type userRepo struct {
+// 	conn *sqlx.DB
+// }
+
+// func NewUserRepo(db *sqlx.DB) *userRepo {
+// 	return &userRepo{conn: db}
+// }
+
 type userRepo struct {
-	conn *sqlx.DB
+	conn *db
 }
 
-func NewUserRepo(db *sqlx.DB) *userRepo {
+func NewUserRepo(db *db) *userRepo {
 	return &userRepo{conn: db}
 }
 
 func (db *userRepo) GetUserByID(id string) (*models.User, error) {
 	user := new(models.User)
 
-	err := db.conn.Get(user, "SELECT first_name, second_name, birthdate, gender, biography, city FROM public.users WHERE id = $1", id)
+	err := db.conn.slave1.Get(user, "SELECT first_name, second_name, birthdate, gender, biography, city FROM public.users WHERE id = $1", id)
 	if err == sql.ErrNoRows {
 		err := errors.New("user not found")
 		return nil, err
@@ -33,7 +40,7 @@ func (db *userRepo) GetUserByID(id string) (*models.User, error) {
 
 func (db *userRepo) SearchUser(firstName string, lastName string) (*[]models.User, error) {
 	users := new([]models.User)
-	stm, err := db.conn.Preparex(`SELECT id,
+	stm, err := db.conn.slave1.Preparex(`SELECT id,
 						first_name, 
 						second_name, 
 						birthdate, 
@@ -60,7 +67,7 @@ func (db *userRepo) SearchUser(firstName string, lastName string) (*[]models.Use
 
 func (db *userRepo) CreateUser(user *models.User) (*models.UserRegisterResponse, error) {
 	result := new(models.UserRegisterResponse)
-	rows, err := db.conn.NamedQuery(`INSERT INTO users (first_name, second_name, birthdate, gender, biography, city) 
+	rows, err := db.conn.master.NamedQuery(`INSERT INTO users (first_name, second_name, birthdate, gender, biography, city) 
 				VALUES(:first_name, :second_name, :birthdate, :gender, :biography, :city)
 				RETURNING id;`, user)
 	if err != nil {
@@ -80,7 +87,7 @@ func (db *userRepo) CreateUser(user *models.User) (*models.UserRegisterResponse,
 
 func (db *userRepo) GetAuthData(loginData *models.LoginRequest) (*models.AuthData, error) {
 	authData := new(models.AuthData)
-	err := db.conn.Get(authData, "SELECT password_hash, salt FROM public.user_data WHERE user_id = $1", loginData.UserID)
+	err := db.conn.master.Get(authData, "SELECT password_hash, salt FROM public.user_data WHERE user_id = $1", loginData.UserID)
 	if err == sql.ErrNoRows {
 		err := errors.New("user not found")
 		return nil, err
@@ -94,7 +101,7 @@ func (db *userRepo) GetAuthData(loginData *models.LoginRequest) (*models.AuthDat
 func (db *userRepo) CreateAccessToken(userID string) (string, error) {
 	token := uuid.New().String()
 
-	_, err := db.conn.Exec("INSERT INTO tokens(access_token, user_id) VALUES($1, $2)", token, userID)
+	_, err := db.conn.master.Exec("INSERT INTO tokens(access_token, user_id) VALUES($1, $2)", token, userID)
 	if err != nil {
 		return "", err
 	}
@@ -102,7 +109,7 @@ func (db *userRepo) CreateAccessToken(userID string) (string, error) {
 }
 
 func (db *userRepo) CreateAuthData(userID string, passwordHash string, salt string) error {
-	_, err := db.conn.Exec("INSERT INTO user_data(user_id, password_hash, salt) VALUES($1, $2, $3)", userID, passwordHash, salt)
+	_, err := db.conn.master.Exec("INSERT INTO user_data(user_id, password_hash, salt) VALUES($1, $2, $3)", userID, passwordHash, salt)
 	if err != nil {
 		return err
 	}

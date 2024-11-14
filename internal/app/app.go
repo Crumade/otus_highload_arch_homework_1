@@ -17,21 +17,35 @@ type Application struct {
 func (app *Application) Run() {
 	app.NewZapLogger()
 
-	db, err := storage.NewConnection()
+	db, err := storage.NewDB()
 	if err != nil {
 		app.logger.Fatal("DB connection error", zap.Error(err))
 	}
 	defer db.Close()
+
+	// db, err := storage.NewConnection(storage.PORT_MASTER)
+	// if err != nil {
+	// 	app.logger.Fatal("DB connection error", zap.Error(err))
+	// }
+	// defer db.Close()
 
 	cache, err := storage.NewRedisConnection()
 	if err != nil {
 		app.logger.Fatal("Redis error", zap.Error(err))
 	}
 
-	app.InitDB(db)
+	storage.MigrateSchema(db.Master())
+	app.logger.Info("MasterDB schema migration success")
+	storage.MigrateSchema(db.Slave1())
+	app.logger.Info("Slave1DB schema migration success")
+	storage.MigrateSchema(db.Slave2())
+	app.logger.Info("Slave2DB schema migration success")
+
+	app.MigrateData(db.Master())
+
 	storage.Warming(cache)
 	userRepo := storage.NewUserRepo(db)
-	postsRepo := storage.NewPostsRepo(db)
+	postsRepo := storage.NewPostsRepo(db.Master())
 
 	app.service = service.NewService(userRepo, postsRepo, app.logger)
 	app.RunServer()
@@ -45,10 +59,7 @@ func (app *Application) NewZapLogger() {
 	}
 }
 
-func (app *Application) InitDB(db *sqlx.DB) {
-
-	storage.MigrateSchema(db)
-	app.logger.Info("DB connection success")
+func (app *Application) MigrateData(db *sqlx.DB) {
 
 	err := storage.MigrateUsers(db)
 	if err != nil {

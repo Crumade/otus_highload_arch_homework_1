@@ -20,21 +20,58 @@ import (
 )
 
 const (
-	HOST     = "host.docker.internal"
-	PORT     = 5431
-	USER     = "postgres"
-	PASSWORD = "postgres"
-	DBNAME   = "social_network"
+	HOST        = "host.docker.internal"
+	PORT_MASTER = 5431
+	PORT_SLAVE1 = 6431
+	PORT_SLAVE2 = 6432
+	USER        = "postgres"
+	PASSWORD    = "postgres"
+	DBNAME      = "social_network"
 )
 
-type PostgresDB struct {
-	Conn *sqlx.DB
+type db struct {
+	master *sqlx.DB
+	slave1 *sqlx.DB
+	slave2 *sqlx.DB
 }
 
-func NewConnection() (*sqlx.DB, error) {
+func NewDB() (*db, error) {
+	master, err := NewConnection(PORT_MASTER)
+	if err != nil {
+		return nil, err
+	}
+	slave1, err := NewConnection(PORT_SLAVE1)
+	if err != nil {
+		return nil, err
+	}
+	slave2, err := NewConnection(PORT_SLAVE2)
+	if err != nil {
+		return nil, err
+	}
+	return &db{master: master,
+		slave1: slave1,
+		slave2: slave2}, nil
+}
+
+func (db *db) Close() {
+	db.master.Close()
+	db.slave1.Close()
+	db.slave2.Close()
+}
+func (db *db) Master() *sqlx.DB {
+	return db.master
+}
+func (db *db) Slave1() *sqlx.DB {
+	return db.slave1
+}
+func (db *db) Slave2() *sqlx.DB {
+	return db.slave2
+}
+
+func NewConnection(port int) (*sqlx.DB, error) {
 	connString := fmt.Sprintf(
 		"host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
-		HOST, PORT, USER, PASSWORD, DBNAME,
+		HOST, port, USER, PASSWORD, DBNAME,
 	)
 	var err error
 	conn, err := sqlx.Connect("pgx", connString)
@@ -68,13 +105,13 @@ func MigrateSchema(db *sqlx.DB) {
 		log.Fatal("New DB Instance error: " + err.Error())
 	}
 	if err := m.Up(); err != nil {
-		log.Fatal("Up migrations error: " + err.Error())
+		log.Println("Up migrations error: " + err.Error())
 	}
 }
 
 func createIndexes(db *sqlx.DB) error {
 
-	ext, err := db.Preparex("CREATE EXTENSION pg_trgm;")
+	ext, err := db.Preparex("CREATE EXTENSION IF NOT EXISTS pg_trgm;")
 	if err != nil {
 		return err
 	}
@@ -84,7 +121,7 @@ func createIndexes(db *sqlx.DB) error {
 	}
 
 	users_index, err := db.Preparex(`
-	CREATE INDEX users_names_idx ON users USING gist(second_name gist_trgm_ops, first_name gist_trgm_ops);
+	CREATE INDEX IF NOT EXISTS users_names_idx ON users USING gist(second_name gist_trgm_ops, first_name gist_trgm_ops);
 	`)
 	if err != nil {
 		return err

@@ -2,14 +2,22 @@ version: '3.9'
 services:
   backend:
     build: .
+    container_name: backend-service
     ports:
       - '8080:8080'
+    # command:
+    #   /bin/sh -c "/app/conf-replica.sh"
     depends_on:
-      db:
+      db_master:
         condition: service_healthy  
+      db_slave_1:
+        condition: service_healthy 
+      db_slave_2:
+        condition: service_healthy 
 
-  db:
+  db_master:
     image: postgres:16.3-bookworm
+    container_name: pgmaster
     restart: always
     user: postgres
     environment:
@@ -19,6 +27,59 @@ services:
       - TZ=Europe/Moscow
     ports:
       - '5431:5432'
+    # volumes:
+    #   - pgmaster:/var/lib/postgresql/data:z
+    #   - ./pgconf/master/my-postgres.conf:/var/lib/postgresql/data/postgresql.conf
+    #   - ./pgconf/master/pg-hba.conf:/var/lib/postgresql/data/pg_hba.conf
+    volumes:
+     - pgmaster:/var/lib/postgresql/data:z
+    command: postgres -c wal_level=logical 
+      # && postgres -c synchronous_standby_names='pgslave_1'
+      # && postgres -c synchronous_commit=on
+    healthcheck:
+      test: [ "CMD", "pg_isready" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  db_slave_1:
+    image: postgres:16.3-bookworm
+    container_name: pgslave_1
+    restart: always
+    user: postgres
+    environment:
+      - POSTGRES_user=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=social_network
+      - TZ=Europe/Moscow
+    ports:
+      - '6431:5432'
+    volumes:
+      - pgslave_1:/var/lib/postgresql/data:z
+    #   # - ./pgconf/slave1/my-postgres.conf:/etc/postgresql/postgresql.conf
+    depends_on:
+      - db_master
+    healthcheck:
+      test: [ "CMD", "pg_isready" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  db_slave_2:
+    image: postgres:16.3-bookworm
+    container_name: pgslave_2
+    restart: always
+    user: postgres
+    environment:
+      - POSTGRES_user=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=social_network
+      - TZ=Europe/Moscow
+    ports:
+      - '6432:5432'
+    volumes:
+      - pgslave_2:/var/lib/postgresql/data:z
+    #   # - ./pgconf/slave2/my-postgres.conf:/etc/postgresql/postgresql.conf
+    depends_on:
+      - db_master
     healthcheck:
       test: [ "CMD", "pg_isready" ]
       interval: 10s
@@ -34,6 +95,10 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+volumes:
+  pgmaster:
+  pgslave_1:
+  pgslave_2:
 networks:
   host:
     external: true     
