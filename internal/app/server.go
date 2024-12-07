@@ -9,7 +9,7 @@ import (
 
 func (app *Application) RunServer() {
 	s := &http.Server{
-		Addr:           ":8080",
+		Addr:           ":80",
 		Handler:        app.NewRouter( /* cache.Conn*/ ),
 		ReadTimeout:    10 * time.Second,
 		WriteTimeout:   10 * time.Second,

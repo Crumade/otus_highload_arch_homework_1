@@ -21,6 +21,8 @@ type Service interface {
 	GetPostFeed(*redis.Client, int, int) (*[]models.Post, error)
 	DeletePost(string) (bool, error)
 	GetPost(string) (*models.Post, error)
+	CreatePost(*models.Post) (*models.NewPostResponse, error)
+	UpdatePost(*models.Post) error
 }
 
 func (srv ServiceHandler) login(w http.ResponseWriter, r *http.Request) {
@@ -134,28 +136,34 @@ func (srv ServiceHandler) getPostByID(w http.ResponseWriter, r *http.Request) {
 }
 
 func (srv ServiceHandler) createPost(w http.ResponseWriter, r *http.Request) {
-	//log.Println(db)
-	w.Write([]byte("поcт получен, метод не реализован"))
-	// result, err := service.GetUser(db, id)
-	// if err != nil {
-	// 	utils.WriteError(w, http.StatusBadRequest, err)
-	// 	return
-	// }
-	// w.Header().Add("Content-Type", "application/json")
-	// utils.WriteJSON(w, http.StatusOK, result)
+	post := new(models.Post)
+
+	err := utils.ParseJSON(r, post)
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, *r, err)
+	}
+	result, err := srv.service.CreatePost(post)
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, *r, err)
+	}
+	w.Header().Add("Content-Type", "application/json")
+	utils.WriteJSON(w, http.StatusCreated, result)
 
 }
 
 func (srv ServiceHandler) updatePost(w http.ResponseWriter, r *http.Request) {
-	//log.Println(db)
-	w.Write([]byte("поcт получен, метод не реализован"))
-	// result, err := service.GetUser(db, id)
-	// if err != nil {
-	// 	utils.WriteError(w, http.StatusBadRequest, err)
-	// 	return
-	// }
-	// w.Header().Add("Content-Type", "application/json")
-	// utils.WriteJSON(w, http.StatusOK, result)
+	post := new(models.Post)
+
+	err := utils.ParseJSON(r, post)
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, *r, err)
+	}
+	err = srv.service.UpdatePost(post)
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, *r, err)
+	}
+	w.Header().Add("Content-Type", "application/json")
+	utils.WriteJSON(w, http.StatusOK, nil)
 
 }
 

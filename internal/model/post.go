@@ -5,3 +5,7 @@ type Post struct {
 	Text   string `json:"text" db:"content"`
 	Author string `json:"author_user_id" db:"user_id"`
 }
+
+type NewPostResponse struct {
+	ID string `json:"id" db:"id"`
+}

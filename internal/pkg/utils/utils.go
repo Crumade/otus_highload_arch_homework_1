@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strings"
 )
 
 type ErrorResponse struct {
@@ -20,12 +21,22 @@ func ParseJSON(r *http.Request, payload any) error {
 	return json.NewDecoder(r.Body).Decode(payload)
 }
 
+func ParseAccessToken(r http.Request) (string, error) {
+	h := r.Header.Get("Authorization")
+	token, ok := strings.CutPrefix(h, "Bearer ")
+	if !ok {
+		return "", errors.New("отсутствует токен доступа")
+	}
+	return token, nil
+}
+
 func WriteJSON(w http.ResponseWriter, status int, payload any) error {
 	w.WriteHeader(status)
 	return json.NewEncoder(w).Encode(payload)
 }
 
 func WriteError(w http.ResponseWriter, status int, req http.Request, err error) {
+	w.Header().Add("Retry-After", "30")
 	WriteJSON(w, status, ErrorResponse{Message: err.Error(), RequestID: GetRequestID(req), Code: 0})
 }
 

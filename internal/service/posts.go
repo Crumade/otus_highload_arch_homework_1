@@ -40,3 +40,19 @@ func (srv *service) GetPost(id string) (*models.Post, error) {
 	}
 	return post, nil
 }
+
+func (srv *service) CreatePost(post *models.Post) (*models.NewPostResponse, error) {
+	newPost, err := srv.postsRepo.CreatePost(post)
+	if err != nil {
+		return nil, err
+	}
+	return newPost, nil
+}
+
+func (srv *service) UpdatePost(post *models.Post) error {
+	err := srv.postsRepo.UpdatePost(post)
+	if err != nil {
+		return nil
+	}
+	return nil
+}

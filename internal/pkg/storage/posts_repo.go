@@ -69,7 +69,38 @@ func (db *postsRepo) DeletePost(id string) (bool, error) {
 	return true, nil
 }
 
+func (db *postsRepo) CreatePost(post *models.Post) (*models.NewPostResponse, error) {
+	result := new(models.NewPostResponse)
+	rows, err := db.conn.NamedQuery(`INSERT INTO public.posts (user_id, content, author) 
+				VALUES(:user_id, :content, :author)
+				RETURNING id;`, post)
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+	if rows.Next() {
+		err := rows.StructScan(result)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return result, nil
+}
+
 func (db *postsRepo) GetPosts(limit int, offset int) (*[]models.Post, error) {
 
 	return nil, nil
+}
+func (db *postsRepo) UpdatePost(post *models.Post) error {
+	rows, err := db.conn.NamedQuery(`UPDATE public.posts 
+									SET content = :content
+									WHERE id = :id;`, post)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	return nil
 }

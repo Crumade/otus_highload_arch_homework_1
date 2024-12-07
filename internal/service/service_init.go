@@ -32,4 +32,6 @@ type postsRepo interface {
 	GetPostFeed(int, int) (*[]models.Post, error)
 	GetPostByID(string) (*models.Post, error)
 	DeletePost(string) (bool, error)
+	CreatePost(*models.Post) (*models.NewPostResponse, error)
+	UpdatePost(*models.Post) error
 }
